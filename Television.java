@@ -1,70 +1,61 @@
-/**
- * Package contains Assignment 5 Task 1 from acadgild.
- */
-package assignment61;
+package assignment62;
 
-import java.io.IOException;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Path; 
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat; 
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat; 
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat; 
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-
 
 /**
  * @author Yogesh
  * Television.Java
- * Purpose:  Write a Map Reduce program that takes the output of Task 5 (refer session 5, assignment 1) as input,
- * and produce output which is sorted on the total units sold.
- * You may use a single reducer for the sorting
+ * Purpose:  Enhance the Map Reduce program of Task 8 (refer session 6, assignment 1) to use multiple reducers for sorting.
+ * The driver should accept three additional values: the minimum units sold, the maximum units sold and number of reducers to use. 
+ * Use units sold as key and company as value. 
+ * Write a custom partitioner to divide the keys on the basis of range. Take minimum to be 0 and maximum to be 10. Divide them across 2 reducers.
  * 
- * @param String parameter as hdfs path of input file & hdfs output directory.
+ * @param String parameter as hdfs path of input file (output file of assignment61) & hdfs output directory.
  * 
  */
 
 public class Television {
-
 	@SuppressWarnings("deprecation")
-	public static void main(String[] args) throws IllegalArgumentException, IOException, ClassNotFoundException, InterruptedException {
-		// TODO Auto-generated method stub
-		
-		//get configuration
+	public static void main(String[] args) throws Exception {
 		Configuration conf = new Configuration();
 		
-		//instantiate Job(Configuration, JobName)
-		Job job = new Job(conf, "Assignment61");
-		
-		//Jar class to initiate the program
+		Job job = new Job(conf, "Assignment62");
 		job.setJarByClass(Television.class);
-		
-		//set mapper/reducer classes
-		job.setMapperClass(TelevisionMapper.class);
-		job.setReducerClass(TelevisionReducer.class);
-		
-		//input ARGUMENTS to the program
-		FileInputFormat.addInputPath(job, new Path(args[0]));
-		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-		
-		//input classes to Program
-		job.setInputFormatClass(TextInputFormat.class);
-		job.setOutputFormatClass(SequenceFileOutputFormat.class);
-		
-		//output classes of Mapper
-		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(IntWritable.class);
-		
-		//output classes of Reducer
+
+		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputValueClass(Text.class);
+
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(IntWritable.class);
 		
-		//Mapper Reducer Invocation
-		job.waitForCompletion(true);
+		job.setMapperClass(TelevisionMapper.class);
+		job.setReducerClass(TelevisionReducer.class);
+		job.setPartitionerClass(TelevisionPartitioner.class);
 		
-	}
+		//Not using Combiner here, as it produces output of different type as compared to the output of map()
+		//job.setCombinerClass(Task9Reducer.class);
+		
+		job.setNumReduceTasks(2);
+		
+		job.setInputFormatClass(SequenceFileInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
 
+		FileInputFormat.addInputPath(job, new Path(args[0])); 
+		FileOutputFormat.setOutputPath(job,new Path(args[1]));
+		
+		/*
+		Path out=new Path(args[1]);
+		out.getFileSystem(conf).delete(out);
+		*/
+		
+		job.waitForCompletion(true);
+	}
 }
